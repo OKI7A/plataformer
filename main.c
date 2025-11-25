@@ -1,75 +1,131 @@
 #include "raylib.h"
-#include <stdlib.h>
-#include <time.h>
-#include <stdbool.h>
+#include <math.h>
 
-int main(void)
-{
-    const int screenWidth = 800;
-    const int screenHeight = 450;
-    InitWindow(screenWidth, screenHeight, "Juego de la Vida - Raylib base");
-    SetTargetFPS(10);
+#define PLAT_COUNT 5
+#define SCREEN_W 800
+#define SCREEN_H 600
 
-    const int cols = 80;
-    const int rows = 45;
-    const int cellSize = 10;
+// FALTA PERSONAJE POR DEFINIR SALE 
 
-    bool grid[45][80] = { false };
-    bool next[45][80] = { false };
 
-    bool running = true;
+typedef struct Player {
+    Rectangle rect;
+    Vector2 velocity;
+    bool onGround;
+} Player;
 
-    srand(time(NULL));
+int main(void) {
+    InitWindow(SCREEN_W, SCREEN_H, "Ian el pan");
+    SetTargetFPS(60);
 
-    for (int y = 0; y < rows; y++)
-        for (int x = 0; x < cols; x++)
-            grid[y][x] = GetRandomValue(0, 4) == 0;
+    // Jugador
+    Player player = { { 100.0f, 100.0f, 32.0f, 48.0f }, {0,0}, false };
+    const float MOVE_SPEED = 220.0f;    
+    const float GRAVITY = 900.0f;       
+    const float JUMP_FORCE = 420.0f;    
 
-    while (!WindowShouldClose())
-    {
-        if (running)
-        {
-            for (int y = 0; y < rows; y++)
-            {
-                for (int x = 0; x < cols; x++)
-                {
-                    int alive = 0;
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        for (int dx = -1; dx <= 1; dx++)
-                        {
-                            if (dx == 0 && dy == 0) continue;
-                            int nx = x + dx;
-                            int ny = y + dy;
-                            if (nx >= 0 && nx < cols && ny >= 0 && ny < rows)
-                                if (grid[ny][nx]) alive++;
+    // Plataformas 
+    static Rectangle platforms[PLAT_COUNT] = {
+    { 0, SCREEN_H - 20, SCREEN_W, 20 },
+    { 200, 450, 120, 16 },
+    { 380, 350, 160, 16 },
+    { 80, 300, 100, 16 },
+    { 600, 250, 140, 16 }
+};
+
+    // Cámara simple 
+    Camera2D camera = { 0 };
+    camera.target = (Vector2){ player.rect.x + player.rect.width/2, player.rect.y + player.rect.height/2 };
+    camera.offset = (Vector2){ SCREEN_W/2.0f, SCREEN_H/2.0f };
+    camera.zoom = 1.0f;
+
+    while (!WindowShouldClose()) {
+        float dt = GetFrameTime();
+
+        // --- INPUT HORIZONTAL ---
+        float dx = 0;
+        if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) dx -= 1;
+        if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) dx += 1;
+        player.velocity.x = dx * MOVE_SPEED;
+
+        // --- JUMP ---
+        if ((IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) && player.onGround) {
+            player.velocity.y = -JUMP_FORCE;
+            player.onGround = false;
+        }
+
+        // --- GRAVITY ---
+        player.velocity.y += GRAVITY * dt;
+
+        // Aplicar movimiento
+        player.rect.x += player.velocity.x * dt;
+        player.rect.y += player.velocity.y * dt;
+
+        // --- COLISIONES SIMPLES ---
+        player.onGround = false;
+
+        for (int i = 0; i < PLAT_COUNT; i++) {
+            Rectangle plat = platforms[i];
+
+            if (CheckCollisionRecs(player.rect, plat)) {
+                Rectangle inter = { 0 };
+                float ix = fmaxf(player.rect.x, plat.x);
+                float iy = fmaxf(player.rect.y, plat.y);
+                float ax = fminf(player.rect.x + player.rect.width, plat.x + plat.width);
+                float ay = fminf(player.rect.y + player.rect.height, plat.y + plat.height);
+                inter.x = ix;
+                inter.y = iy;
+                inter.width = ax - ix;
+                inter.height = ay - iy;
+
+                if (inter.width > 0 && inter.height > 0) {
+                    if (inter.width < inter.height) {
+                        if (player.rect.x < plat.x) {
+                            player.rect.x -= inter.width;
+                        } else {
+                            player.rect.x += inter.width;
+                        }
+                        player.velocity.x = 0;
+                    } else {
+
+                        if (player.rect.y < plat.y) {
+                            player.rect.y -= inter.height;
+                            player.velocity.y = 0;
+                            player.onGround = true;
+                        } else {
+                            player.rect.y += inter.height;
+                            player.velocity.y = 0;
                         }
                     }
-                    if (grid[y][x] && (alive == 2 || alive == 3))
-                        next[y][x] = true;
-                    else if (!grid[y][x] && alive == 3)
-                        next[y][x] = true;
-                    else
-                        next[y][x] = false;
                 }
             }
-
-            for (int y = 0; y < rows; y++)
-                for (int x = 0; x < cols; x++)
-                    grid[y][x] = next[y][x];
         }
 
+
+        if (player.rect.x < -200) player.rect.x = -200;
+        if (player.rect.x + player.rect.width > SCREEN_W + 200) player.rect.x = SCREEN_W + 200 - player.rect.width;
+
+        // --- CAMARA ---
+        camera.target = (Vector2){ player.rect.x + player.rect.width/2.0f, player.rect.y + player.rect.height/2.0f };
+
+        // --- DIBUJO ---
         BeginDrawing();
-        ClearBackground(WHITE);
+            ClearBackground(RAYWHITE);
 
-        for (int y = 0; y < rows; y++)
-        {
-            for (int x = 0; x < cols; x++)
-            {
-                if (grid[y][x])
-                    DrawRectangle(x * cellSize, y * cellSize, cellSize - 1, cellSize - 1, BLACK);
-            }
-        }
+            BeginMode2D(camera);
+                // Dibujar plataformas
+                for (int i = 0; i < PLAT_COUNT; i++) {
+                    DrawRectangleRec(platforms[i], GRAY);
+                }
+
+                // Dibujar jugador
+                Color playerColor = player.onGround ? BLUE : RED;
+                DrawRectangleRec(player.rect, playerColor);
+
+                
+            EndMode2D();
+
+            
 
         EndDrawing();
     }
