@@ -5,7 +5,7 @@
 #define SCREEN_H 600
 
 #define PLAT_COUNT 12   
-#define GRAVITY 900.0f
+#define GRAVITY 1000.0f
 
 typedef struct Player {
     Rectangle rect;
@@ -34,9 +34,9 @@ void DrawKitchenBackground() {
     }
 
     // Refrigerador
-    DrawRectangle(40, SCREEN_H - 280, 140, 260, (Color){210, 210, 225, 255});
-    DrawRectangle(50, SCREEN_H - 200, 22, 60, GRAY);
-    DrawRectangle(50, SCREEN_H - 260, 22, 40, GRAY);
+    // DrawRectangle(40, SCREEN_H - 280, 140, 260, (Color){210, 210, 225, 255});
+    // DrawRectangle(50, SCREEN_H - 200, 22, 60, GRAY);
+    // DrawRectangle(50, SCREEN_H - 260, 22, 40, GRAY);
 
     
     DrawRectangle(250, 60, 300, 40, (Color){130,110,85,255});
@@ -103,7 +103,7 @@ int main() {
     };
 
     const float MOVE_SPEED = 210;
-    const float JUMP_FORCE = 420;
+    const float JUMP_FORCE = 310;
 
     // PLATAFORMAS 
    
@@ -111,24 +111,36 @@ int main() {
         // Piso
         {0, SCREEN_H - 20, SCREEN_W, 20},
 
-        // Repisas y mesas
-        {200, 480, 150, 14},
-        {420, 460, 130, 20},
-        {100, 420, 160, 16},
-        {580, 420, 140, 16},
+        // Repisas y mesas 180
+        {80, 540, 100, 20}, 
+        {220, 510, 150, 18},
+        {420, 480, 80, 16},
+        {530, 450, 140, 16},
+        {700, 410, 70, 15},        
+        {560, 365, 90, 17},
+        {490, 320, 50, 17},
+        {320, 300, 120, 17},
+        {240, 250, 50, 13},
+        {100, 205, 120, 13},
+
+
+
+
+
+
 
         // Estufa grande
-        {300, 510, 120, 28},
+        // {500, 210, 120, 17},
 
         // Altas
-        {250, 340, 120, 14},
-        {450, 315, 140, 20},
-        {80, 290, 100, 14},
-        {600, 270, 160, 20},
+        // {250, 340, 120, 14},
+        // {450, 315, 140, 20},
+        // {80, 290, 100, 14},
+        // {600, 270, 160, 20},
 
-        // Muy altas
-        {350, 200, 120, 14},
-        {180, 160, 140, 14},
+        // // Muy altas
+        // {350, 200, 120, 14},
+        // {180, 160, 140, 14},
     };
 
     
