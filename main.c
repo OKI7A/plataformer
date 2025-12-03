@@ -13,9 +13,9 @@ typedef struct Player {
     bool onGround;
 } Player;
 
-// -------------------------
+
 // DIBUJAR FONDO COCINA 
-// -------------------------
+
 void DrawKitchenBackground() {
 
     DrawRectangle(0, 0, SCREEN_W, SCREEN_H, (Color){245, 240, 230, 255});
@@ -38,11 +38,11 @@ void DrawKitchenBackground() {
     DrawRectangle(50, SCREEN_H - 200, 22, 60, GRAY);
     DrawRectangle(50, SCREEN_H - 260, 22, 40, GRAY);
 
-    // Alacena superior
+    
     DrawRectangle(250, 60, 300, 40, (Color){130,110,85,255});
     DrawRectangleLines(250, 60, 300, 40, (Color){90,70,50,255});
 
-    // Objetos arriba
+    
     DrawRectangle(270, 40, 30, 20, RED);
     DrawRectangle(330, 45, 20, 15, BLUE);
     DrawRectangle(370, 40, 40, 25, ORANGE);
@@ -54,9 +54,9 @@ void DrawKitchenBackground() {
     DrawLine(600, 130, 760, 130, (Color){120,160,200,255});
 }
 
-// -------------------------
+
 // DIBUJO DE PLATAFORMAS
-// -------------------------
+
 void DrawPlatform(Rectangle p) {
 
     // Suelo especial grande
@@ -93,9 +93,9 @@ int main() {
     InitWindow(SCREEN_W, SCREEN_H, "Fred the Bread - POLLOS Y PEIBOL");
     SetTargetFPS(60);
 
-    // ---------------------------------------------------
+    
     // JUGADOR
-    // ---------------------------------------------------
+   
     Player player = {
         .rect = (Rectangle){100, 300, 32, 48},
         .velocity = {0,0},
@@ -105,9 +105,8 @@ int main() {
     const float MOVE_SPEED = 210;
     const float JUMP_FORCE = 420;
 
-    // ---------------------------------------------------
     // PLATAFORMAS 
-    // ---------------------------------------------------
+   
     Rectangle platforms[PLAT_COUNT] = {
         // Piso
         {0, SCREEN_H - 20, SCREEN_W, 20},
@@ -132,9 +131,9 @@ int main() {
         {180, 160, 140, 14},
     };
 
-    // ---------------------------------------------------
+    
     // BUCLE DEL JUEGO
-    // ---------------------------------------------------
+    
     while (!WindowShouldClose()) {
 
         float dt = GetFrameTime();
@@ -194,9 +193,9 @@ int main() {
             }
         }
 
-        // ---------------------------------------------------
+       
         // DIBUJO
-        // ---------------------------------------------------
+       
         BeginDrawing();
         ClearBackground(BLACK);
 
