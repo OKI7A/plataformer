@@ -4,7 +4,7 @@
 #define SCREEN_W 800
 #define SCREEN_H 600
 
-#define PLAT_COUNT 12   // ahora hay más plataformas
+#define PLAT_COUNT 12   
 #define GRAVITY 900.0f
 
 typedef struct Player {
@@ -14,13 +14,13 @@ typedef struct Player {
 } Player;
 
 // -------------------------
-// DIBUJAR FONDO DEL CUARTO
+// DIBUJAR FONDO COCINA 
 // -------------------------
 void DrawKitchenBackground() {
-    // Pared color crema
+
     DrawRectangle(0, 0, SCREEN_W, SCREEN_H, (Color){245, 240, 230, 255});
 
-    // Azulejos en mitad inferior
+   
     int tileSize = 48;
     for (int x = 0; x < SCREEN_W; x += tileSize) {
         for (int y = SCREEN_H/2; y < SCREEN_H; y += tileSize) {
@@ -90,7 +90,7 @@ void DrawPlatform(Rectangle p) {
 // -------------------------------------------------------
 
 int main() {
-    InitWindow(SCREEN_W, SCREEN_H, "Fred the Bread - Sandbox Room");
+    InitWindow(SCREEN_W, SCREEN_H, "Fred the Bread - POLLOS Y PEIBOL");
     SetTargetFPS(60);
 
     // ---------------------------------------------------
@@ -106,7 +106,7 @@ int main() {
     const float JUMP_FORCE = 420;
 
     // ---------------------------------------------------
-    // PLATAFORMAS (CUARTO COMPLETO)
+    // PLATAFORMAS 
     // ---------------------------------------------------
     Rectangle platforms[PLAT_COUNT] = {
         // Piso
