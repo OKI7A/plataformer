@@ -1,10 +1,11 @@
 #include "raylib.h"
 #include <math.h>
 
-#define SCREEN_W 800
-#define SCREEN_H 600
+#define VIRTUAL_W 800
+#define VIRTUAL_H 600
 
-#define PLAT_COUNT 12   
+#define ENEMY_COUNT 5
+#define PLAT_COUNT 12
 #define GRAVITY 1000.0f
 
 typedef struct Player {
@@ -13,17 +14,19 @@ typedef struct Player {
     bool onGround;
 } Player;
 
+typedef struct Enemy {
+    Rectangle rect;
+    Rectangle collisionRect;  
+} Enemy;
 
-// DIBUJAR FONDO COCINA 
+// FONDO
 
 void DrawKitchenBackground() {
+    DrawRectangle(0, 0, VIRTUAL_W, VIRTUAL_H, (Color){245, 240, 230, 255});
 
-    DrawRectangle(0, 0, SCREEN_W, SCREEN_H, (Color){245, 240, 230, 255});
-
-   
-    int tileSize = 48;
-    for (int x = 0; x < SCREEN_W; x += tileSize) {
-        for (int y = SCREEN_H/2; y < SCREEN_H; y += tileSize) {
+    int tileSize = 70;
+    for (int x = 0; x < VIRTUAL_W; x += tileSize) {
+        for (int y = VIRTUAL_H/2; y < VIRTUAL_H; y += tileSize) {
             Color tileColor = ((x/tileSize + y/tileSize) % 2 == 0)
                 ? (Color){225,225,225,255}
                 : (Color){205,205,205,255};
@@ -33,130 +36,159 @@ void DrawKitchenBackground() {
         }
     }
 
-    // Refrigerador
-    // DrawRectangle(40, SCREEN_H - 280, 140, 260, (Color){210, 210, 225, 255});
-    // DrawRectangle(50, SCREEN_H - 200, 22, 60, GRAY);
-    // DrawRectangle(50, SCREEN_H - 260, 22, 40, GRAY);
-
-    
     DrawRectangle(250, 60, 300, 40, (Color){130,110,85,255});
     DrawRectangleLines(250, 60, 300, 40, (Color){90,70,50,255});
 
-    
-    DrawRectangle(270, 40, 30, 20, RED);
-    DrawRectangle(330, 45, 20, 15, BLUE);
-    DrawRectangle(370, 40, 40, 25, ORANGE);
-
-    // Ventana
     DrawRectangle(600, 70, 160, 120, (Color){180,220,255,255});
     DrawRectangleLines(600, 70, 160, 120, (Color){120,160,200,255});
-    DrawLine(680, 70, 680, 190, (Color){120,160,200,255});
-    DrawLine(600, 130, 760, 130, (Color){120,160,200,255});
 }
 
-
-// DIBUJO DE PLATAFORMAS
+// PLATAFORMAS
 
 void DrawPlatform(Rectangle p) {
-
-    // Suelo especial grande
-    if (p.y > SCREEN_H - 30) {
+    if (p.y > VIRTUAL_H - 30) {
         DrawRectangleRec(p, (Color){150,140,120,255});
         return;
     }
 
-    // repisa delgada
     if (p.height <= 14) {
         DrawRectangleRec(p, (Color){160,130,90,255});
-        DrawLine(p.x, p.y + p.height, p.x+p.width, p.y+p.height, (Color){60,40,20,255});
         return;
     }
 
-    // mesa
-    if (p.height > 14 && p.height <= 20) {
+    if (p.height <= 20) {
         DrawRectangleRec(p, (Color){180,150,110,255});
-        DrawRectangle(p.x + 8, p.y + p.height, 8, 28, (Color){120, 90, 60, 255});
-        DrawRectangle(p.x + p.width - 16, p.y + p.height, 8, 28, (Color){120, 90, 60, 255});
         return;
     }
 
-    // estufa
-    DrawRectangleRec(p, (Color){100,100,100,255});
-    DrawCircle(p.x + 20, p.y + 8, 7, DARKGRAY);
-    DrawCircle(p.x + 50, p.y + 8, 7, DARKGRAY);
-    DrawCircle(p.x + 80, p.y + 8, 7, DARKGRAY);
+    DrawRectangleRec(p, GRAY);
 }
 
-// -------------------------------------------------------
+// dibujar enemigo
+void DrawEnemy(Enemy enemy) {
+    // Cuerpo del enemigo
+    DrawRectangleRec(enemy.rect, (Color){20, 180, 60, 255});
+    
+    // Ojos
+    DrawCircle(enemy.rect.x + 8, enemy.rect.y + 6, 3, DARKGREEN);
+    DrawCircle(enemy.rect.x + 20, enemy.rect.y + 6, 3, DARKGREEN);
+    
+    
+    // DrawRectangleLinesEx(enemy.collisionRect, 1, RED);
+}
+
+// MAIN
 
 int main() {
-    InitWindow(SCREEN_W, SCREEN_H, "Fred the Bread - POLLOS Y PEIBOL");
+
+    // FULLSCREEN
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_VSYNC_HINT);
+    InitWindow(GetMonitorWidth(0), GetMonitorHeight(0), "Fred the Bread");
+    SetWindowPosition(0, 0);
     SetTargetFPS(60);
 
+<<<<<<< HEAD
     
     // JUGADORdas
    
+=======
+    RenderTexture2D target = LoadRenderTexture(VIRTUAL_W, VIRTUAL_H);
+
+    //GAME OVER STATE
+    bool gameOver = false;
+
+    // JUGADOR
+>>>>>>> 2507642d4199ad10ac640aef05ca929305895ed8
     Player player = {
         .rect = (Rectangle){100, 300, 32, 48},
-        .velocity = {0,0},
+        .velocity = {0, 0},
         .onGround = false
     };
 
     const float MOVE_SPEED = 210;
     const float JUMP_FORCE = 310;
 
-    // PLATAFORMAS 
-   
-    Rectangle platforms[PLAT_COUNT] = {
-        // Piso
-        {0, SCREEN_H - 20, SCREEN_W, 20},
+    const float JUMP_CUTOFF = 200;
+    const float FALL_GRAVITY = 900;
 
-        // Repisas y mesas 180
-        {80, 540, 100, 20}, 
+    // PLATAFORMAS
+    Rectangle platforms[PLAT_COUNT] = {
+        {0, VIRTUAL_H - 20, VIRTUAL_W, 20},
+        {80, 540, 100, 20},
         {220, 510, 150, 18},
         {420, 480, 80, 16},
         {530, 450, 140, 16},
-        {700, 410, 70, 15},        
+        {700, 410, 70, 15},
         {560, 365, 90, 17},
         {490, 320, 50, 17},
         {320, 300, 120, 17},
-        {240, 250, 50, 13},
-        {100, 205, 120, 13},
-
-
-
-
-
-
-
-        // Estufa grande
-        // {500, 210, 120, 17},
-
-        // Altas
-        // {250, 340, 120, 14},
-        // {450, 315, 140, 20},
-        // {80, 290, 100, 14},
-        // {600, 270, 160, 20},
-
-        // // Muy altas
-        // {350, 200, 120, 14},
-        // {180, 160, 140, 14},
+        {240, 255, 50, 17},
+        {100, 215, 120, 13},
+        {19, 150, 120, 17}
     };
 
-    
-    // BUCLE DEL JUEGO
-    
+    // ENEMIGOS
+    Enemy enemies[ENEMY_COUNT] = {
+        {   // Enemigo 1
+            .rect = (Rectangle){260, 490, 28, 16},  
+            .collisionRect = (Rectangle){262, 492, 24, 12}  
+        },
+        {   // Enemigo 2
+            .rect = (Rectangle){450, 460, 28, 16},
+            .collisionRect = (Rectangle){452, 462, 24, 12}
+        },
+        {   // Enemigo 3
+            .rect = (Rectangle){330, 280, 28, 16},
+            .collisionRect = (Rectangle){332, 282, 24, 12}
+        },
+        {   // Enemigo 4
+            .rect = (Rectangle){110, 185, 28, 16},
+            .collisionRect = (Rectangle){112, 187, 24, 12}
+        },
+        {   // Enemigo 5
+            .rect = (Rectangle){560, 350, 28, 16},
+            .collisionRect = (Rectangle){562, 352, 24, 12}
+        }
+    };
+
+    // GAME LOOP
     while (!WindowShouldClose()) {
 
         float dt = GetFrameTime();
 
-        // MOVIMIENTO HORIZONTAL
+        
+        if (IsKeyPressed(KEY_ESCAPE)) break;
+
+        // GAME OVER
+        if (gameOver) {
+
+            if (IsKeyPressed(KEY_R)) {
+                // Reiniciar jugador
+                player.rect.x = 100;
+                player.rect.y = 300;
+                player.velocity = (Vector2){0,0};
+                gameOver = false;
+            }
+
+            // DIBUJAR LA PANTALLA DE GAME OVER
+            BeginDrawing();
+            ClearBackground(BLACK);
+
+            DrawText("GAME OVER", GetScreenWidth()/2 - 180, GetScreenHeight()/2 - 40, 60, RED);
+            DrawText("Presiona R para reiniciar", GetScreenWidth()/2 - 160, GetScreenHeight()/2 + 40, 30, WHITE);
+            DrawText("ESC para salir", GetScreenWidth()/2 - 100, GetScreenHeight()/2 + 80, 20, LIGHTGRAY);
+
+            EndDrawing();
+            continue;
+        }
+
+        // MOVIMIENTO NORMAL
+
         float dx = 0;
         if (IsKeyDown(KEY_A)) dx -= 1;
         if (IsKeyDown(KEY_D)) dx += 1;
         player.velocity.x = dx * MOVE_SPEED;
 
-        // SALTO
         if (IsKeyPressed(KEY_SPACE) && player.onGround) {
             player.velocity.y = -JUMP_FORCE;
             player.onGround = false;
@@ -165,62 +197,86 @@ int main() {
         // GRAVEDAD
         player.velocity.y += GRAVITY * dt;
 
-        // MOVER
+        // SALTO VARIABLE
+        if (!IsKeyDown(KEY_SPACE) && player.velocity.y < 0) {
+            player.velocity.y += FALL_GRAVITY * dt;
+        }
+
+        // MOVER X
         player.rect.x += player.velocity.x * dt;
-        player.rect.y += player.velocity.y * dt;
 
-        // COLISIONES
-        player.onGround = false;
         for (int i = 0; i < PLAT_COUNT; i++) {
-
             if (CheckCollisionRecs(player.rect, platforms[i])) {
 
-                Rectangle p = platforms[i];
-                float overlapX = (player.rect.x + player.rect.width) - p.x;
-                float overlapX2 = (p.x + p.width) - player.rect.x;
+                if (player.velocity.x > 0)
+                    player.rect.x = platforms[i].x - player.rect.width;
 
-                float overlapY = (player.rect.y + player.rect.height) - p.y;
-                float overlapY2 = (p.y + p.height) - player.rect.y;
+                else if (player.velocity.x < 0)
+                    player.rect.x = platforms[i].x + platforms[i].width;
+            }
+        }
 
-                if (overlapX > 0 && overlapX2 > 0 && overlapY > 0 && overlapY2 > 0) {
+        // MOVER Y
+        player.rect.y += player.velocity.y * dt;
+        player.onGround = false;
 
-                    if (overlapY < overlapX) {
-                        if (player.rect.y < p.y) {
-                            player.rect.y -= overlapY;
-                            player.velocity.y = 0;
-                            player.onGround = true;
-                        } else {
-                            player.rect.y += overlapY2;
-                            player.velocity.y = 0;
-                        }
-                    } else {
-                        if (player.rect.x < p.x)
-                            player.rect.x -= overlapX;
-                        else
-                            player.rect.x += overlapX2;
+        for (int i = 0; i < PLAT_COUNT; i++) {
+            if (CheckCollisionRecs(player.rect, platforms[i])) {
 
-                        player.velocity.x = 0;
-                    }
+                if (player.velocity.y > 0) {
+                    player.rect.y = platforms[i].y - player.rect.height;
+                    player.velocity.y = 0;
+                    player.onGround = true;
+                }
+                else if (player.velocity.y < 0) {
+                    player.rect.y = platforms[i].y + platforms[i].height;
+                    player.velocity.y = 0;
                 }
             }
         }
 
-       
-        // DIBUJO
+        
+        for (int i = 0; i < ENEMY_COUNT; i++) {
+            if (CheckCollisionRecs(player.rect, enemies[i].collisionRect)) {
+                gameOver = true;
+            }
+        }
+
+        
+        BeginTextureMode(target);
+        ClearBackground(BLACK);
+        
+        DrawKitchenBackground();
+        
+        for (int i = 0; i < PLAT_COUNT; i++)
+            DrawPlatform(platforms[i]);
+        
+        DrawRectangleRec(player.rect, BLUE);
+        
+        for (int i = 0; i < ENEMY_COUNT; i++) {
+            DrawEnemy(enemies[i]);
+        }
+        
+        EndTextureMode();
+
        
         BeginDrawing();
         ClearBackground(BLACK);
-
-        DrawKitchenBackground();
-
-        for (int i = 0; i < PLAT_COUNT; i++)
-            DrawPlatform(platforms[i]);
-
-        DrawRectangleRec(player.rect, BLUE);
-
+        
+        
+        DrawTexturePro(
+            target.texture,
+            (Rectangle){0, 0, VIRTUAL_W, -VIRTUAL_H},  
+            (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
+            (Vector2){0, 0},
+            0.0f,
+            WHITE
+        );
+        
         EndDrawing();
     }
 
+    UnloadRenderTexture(target);
     CloseWindow();
     return 0;
 }
