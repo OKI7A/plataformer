@@ -5,22 +5,35 @@
 #define VIRTUAL_H 600
 
 #define ENEMY_COUNT 5
-#define PLAT_COUNT 12
-#define GRAVITY 1000.0f
+#define PLAT_COUNT 14
+#define GRAVITY 850.0f
+
+// Estados de animación
+typedef enum {
+    ANIM_IDLE = 0,
+    ANIM_WALK = 1,
+    ANIM_JUMP = 2
+} AnimationState;
 
 typedef struct Player {
     Rectangle rect;
     Vector2 velocity;
     bool onGround;
+    Texture2D spriteSheetRight; 
+    Texture2D spriteSheetLeft;   
+    Rectangle frameRec;
+    int currentFrame;
+    int framesCounter;
+    AnimationState animState;
+    bool facingRight;
+    bool isMoving;
 } Player;
 
 typedef struct Enemy {
     Rectangle rect;
-    Rectangle collisionRect;  
 } Enemy;
 
-// FONDO
-
+// FONDO 
 void DrawKitchenBackground() {
     DrawRectangle(0, 0, VIRTUAL_W, VIRTUAL_H, (Color){245, 240, 230, 255});
 
@@ -36,78 +49,168 @@ void DrawKitchenBackground() {
         }
     }
 
-    DrawRectangle(250, 60, 300, 40, (Color){130,110,85,255});
-    DrawRectangleLines(250, 60, 300, 40, (Color){90,70,50,255});
-
     DrawRectangle(600, 70, 160, 120, (Color){180,220,255,255});
     DrawRectangleLines(600, 70, 160, 120, (Color){120,160,200,255});
 }
 
-// PLATAFORMAS
-
+//PLATAFORMAS
 void DrawPlatform(Rectangle p) {
-    if (p.y > VIRTUAL_H - 30) {
-        DrawRectangleRec(p, (Color){150,140,120,255});
-        return;
-    }
-
-    if (p.height <= 14) {
-        DrawRectangleRec(p, (Color){160,130,90,255});
-        return;
-    }
-
-    if (p.height <= 20) {
-        DrawRectangleRec(p, (Color){180,150,110,255});
-        return;
-    }
-
-    DrawRectangleRec(p, GRAY);
+    DrawRectangleRec(p, (Color){160,130,90,255});
 }
 
-// dibujar enemigo
+// ENEMIGO 
 void DrawEnemy(Enemy enemy) {
-    // Cuerpo del enemigo
     DrawRectangleRec(enemy.rect, (Color){20, 180, 60, 255});
-    
-    // Ojos
-    DrawCircle(enemy.rect.x + 8, enemy.rect.y + 6, 3, DARKGREEN);
+    DrawCircle(enemy.rect.x + 8,  enemy.rect.y + 6, 3, DARKGREEN);
     DrawCircle(enemy.rect.x + 20, enemy.rect.y + 6, 3, DARKGREEN);
-    
-    
-    // DrawRectangleLinesEx(enemy.collisionRect, 1, RED);
 }
 
-// MAIN
+//  ANIMACIÓN DEL JUGADOR
+void UpdatePlayerAnimation(Player *player) {
+    
+    int framesPerAnimation[] = {3, 4, 1}; 
+    float animationSpeed[] = {8.0f, 12.0f, 1.0f}; 
+    
+    player->framesCounter++;
+    
+    
+    AnimationState newState = player->animState;
+    
+    if (!player->onGround) {
+        newState = ANIM_JUMP; 
+    } else if (player->isMoving) {
+        newState = ANIM_WALK; 
+    } else {
+        newState = ANIM_IDLE; 
+    }
+    
+    
+    if (newState != player->animState) {
+        player->animState = newState;
+        player->currentFrame = 0;
+        player->framesCounter = 0;
+    }
+    
+    
+    int speed = (int)(60.0f / animationSpeed[player->animState]);
+    
+    if (player->framesCounter >= speed) {
+        player->currentFrame++;
+        player->framesCounter = 0;
+        
+       
+        if (player->currentFrame >= framesPerAnimation[player->animState]) {
+            player->currentFrame = 0;
+        }
+    }
+}
 
-int main() {
+// DIBUJAR JUGADOR
+void DrawPlayerNuclearFixed(Player player) {
+    
+    if (player.facingRight) {
+        Rectangle rightFrameRec = {
+            player.currentFrame * 32,  
+            player.animState * 32,        
+            32,                           
+            32                            
+        };
+        
+        DrawTextureRec(player.spriteSheetRight, 
+                      rightFrameRec, 
+                      (Vector2){player.rect.x, player.rect.y}, 
+                      WHITE);
+    } else {
+    
+        
+        int totalFrames = 0;
+        switch(player.animState) {
+            case ANIM_IDLE: totalFrames = 3; break;
+            case ANIM_WALK: totalFrames = 4; break;
+            case ANIM_JUMP: totalFrames = 1; break;
+        }
+        
+      
+        int invertedFrame = (totalFrames - 1) - player.currentFrame;
+        if (invertedFrame < 0) invertedFrame = 0;
+        
+        Rectangle leftFrameRec = {
+            invertedFrame * 32,           
+            player.animState * 32,      
+            32,                          
+            32                          
+        };
+        
+        DrawTextureRec(player.spriteSheetLeft, 
+                      leftFrameRec, 
+                      (Vector2){player.rect.x, player.rect.y}, 
+                      WHITE);
+    }
+}
+void DrawPlayerSimpleNuclear(Player player) {
+    if (player.facingRight) {
+        
+        Rectangle frameRec = {player.currentFrame * 32, player.animState * 32, 32, 32};
+        DrawTextureRec(player.spriteSheetRight, frameRec, (Vector2){player.rect.x, player.rect.y}, WHITE);
+    } else {
+    
+        Rectangle frameRec = {player.currentFrame * 32, player.animState * 32, 32, 32};
+        DrawTextureRec(player.spriteSheetLeft, frameRec, (Vector2){player.rect.x, player.rect.y}, WHITE);
+    }
+}
 
-    // FULLSCREEN
+//MAIN
+int main(void) {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_VSYNC_HINT);
     InitWindow(GetMonitorWidth(0), GetMonitorHeight(0), "Fred the Bread");
     SetWindowPosition(0, 0);
     SetTargetFPS(60);
 
     RenderTexture2D target = LoadRenderTexture(VIRTUAL_W, VIRTUAL_H);
+    
+    Texture2D playerSpriteSheetRight = LoadTexture("bread_right.png");
+    Texture2D playerSpriteSheetLeft = LoadTexture("bread_left.png");
+    Texture2D goalTex = LoadTexture("bolsa.png");
+    
+ 
+    if (playerSpriteSheetRight.id == 0) {
+        TraceLog(LOG_ERROR, "ERROR: No se encontró bread_right.png");
+    }
+    
+    if (playerSpriteSheetLeft.id == 0) {
+        TraceLog(LOG_ERROR, "ERROR: No se encontró bread_left.png");
+    }
+    
+    if (playerSpriteSheetRight.id != 0 && playerSpriteSheetLeft.id != 0) {
+        TraceLog(LOG_INFO, "Spritesheets cargados:");
+        TraceLog(LOG_INFO, "  Derecha: %dx%d", playerSpriteSheetRight.width, playerSpriteSheetRight.height);
+        TraceLog(LOG_INFO, "  Izquierda: %dx%d", playerSpriteSheetLeft.width, playerSpriteSheetLeft.height);
+    }
 
-    //GAME OVER STATE
     bool gameOver = false;
+    bool victory = false;
 
-    // JUGADOR
+    //INICIALIZAR JUGADOR 
     Player player = {
-        .rect = (Rectangle){100, 300, 32, 48},
+        .rect = (Rectangle){20, 450, 32, 32},   
         .velocity = {0, 0},
-        .onGround = false
+        .onGround = false,
+        .spriteSheetRight = playerSpriteSheetRight,
+        .spriteSheetLeft = playerSpriteSheetLeft,
+        .frameRec = (Rectangle){0, 0, 32, 32},
+        .currentFrame = 0,
+        .framesCounter = 0,
+        .animState = ANIM_IDLE,
+        .facingRight = true,
+        .isMoving = false
     };
 
     const float MOVE_SPEED = 210;
-    const float JUMP_FORCE = 310;
-
-    const float JUMP_CUTOFF = 200;
+    const float JUMP_FORCE = 350;
     const float FALL_GRAVITY = 900;
 
-    // PLATAFORMAS
     Rectangle platforms[PLAT_COUNT] = {
-        {0, VIRTUAL_H - 20, VIRTUAL_W, 20},
+        {0, 580, 800, 20},
         {80, 540, 100, 20},
         {220, 510, 150, 18},
         {420, 480, 80, 16},
@@ -118,69 +221,70 @@ int main() {
         {320, 300, 120, 17},
         {240, 255, 50, 17},
         {100, 215, 120, 13},
-        {19, 150, 120, 17}
+        {19, 170, 70, 17},
+        {135, 120, 120, 17},
+        {290, 70, 300, 40}
     };
 
-    // ENEMIGOS
     Enemy enemies[ENEMY_COUNT] = {
-        {   // Enemigo 1
-            .rect = (Rectangle){260, 490, 28, 16},  
-            .collisionRect = (Rectangle){262, 492, 24, 12}  
-        },
-        {   // Enemigo 2
-            .rect = (Rectangle){450, 460, 28, 16},
-            .collisionRect = (Rectangle){452, 462, 24, 12}
-        },
-        {   // Enemigo 3
-            .rect = (Rectangle){330, 280, 28, 16},
-            .collisionRect = (Rectangle){332, 282, 24, 12}
-        },
-        {   // Enemigo 4
-            .rect = (Rectangle){110, 185, 28, 16},
-            .collisionRect = (Rectangle){112, 187, 24, 12}
-        },
-        {   // Enemigo 5
-            .rect = (Rectangle){560, 350, 28, 16},
-            .collisionRect = (Rectangle){562, 352, 24, 12}
-        }
+        { .rect = {260, 495, 28, 16} },
+        { .rect = {450, 465, 28, 16} },
+        { .rect = {370, 285, 28, 16} },
+        { .rect = {580, 350, 28, 16} },
+        { .rect = {175, 105, 28, 16} }
     };
 
-    // GAME LOOP
+    Rectangle goal = {480, 35, 80, 45};
+    Rectangle goalSource = { 0, 0, (float)goalTex.width, (float)goalTex.height };
+
+    // GAME LOOP 
     while (!WindowShouldClose()) {
-
         float dt = GetFrameTime();
-
-        
         if (IsKeyPressed(KEY_ESCAPE)) break;
 
-        // GAME OVER
-        if (gameOver) {
-
-            if (IsKeyPressed(KEY_R)) {
-                // Reiniciar jugador
-                player.rect.x = 100;
-                player.rect.y = 300;
-                player.velocity = (Vector2){0,0};
-                gameOver = false;
-            }
-
-            // DIBUJAR LA PANTALLA DE GAME OVER
+        // PANTALLAS FINALES
+        if (gameOver || victory) {
             BeginDrawing();
             ClearBackground(BLACK);
 
-            DrawText("GAME OVER", GetScreenWidth()/2 - 180, GetScreenHeight()/2 - 40, 60, RED);
-            DrawText("Presiona R para reiniciar", GetScreenWidth()/2 - 160, GetScreenHeight()/2 + 40, 30, WHITE);
-            DrawText("ESC para salir", GetScreenWidth()/2 - 100, GetScreenHeight()/2 + 80, 20, LIGHTGRAY);
+            if (victory) {
+                DrawText("¡VICTORIA!", GetScreenWidth()/2 - 180, GetScreenHeight()/2 - 60, 60, GREEN);
+                DrawText("VAMOOOS! Salvaste a FRED", GetScreenWidth()/2 - 230, GetScreenHeight()/2, 30, WHITE);
+            } else {
+                DrawText("GAME OVER", GetScreenWidth()/2 - 180, GetScreenHeight()/2 - 60, 60, RED);
+            }
 
+            DrawText("Presiona R para reiniciar", GetScreenWidth()/2 - 200, GetScreenHeight()/2 + 50, 25, YELLOW);
             EndDrawing();
+
+            if (IsKeyPressed(KEY_R)) {
+                player.rect = (Rectangle){20, 450, 32, 32};
+                player.velocity = (Vector2){0,0};
+                player.onGround = false;
+                player.currentFrame = 0;
+                player.animState = ANIM_IDLE;
+                player.facingRight = true;
+                player.isMoving = false;
+                gameOver = false;
+                victory = false;
+            }
             continue;
         }
 
-        // MOVIMIENTO NORMAL
-
+        // MOVIMIENTO 
+        player.isMoving = false;
+        
         float dx = 0;
-        if (IsKeyDown(KEY_A)) dx -= 1;
-        if (IsKeyDown(KEY_D)) dx += 1;
+        if (IsKeyDown(KEY_A)) {
+            dx -= 1;
+            player.facingRight = false;
+            player.isMoving = true;
+        }
+        if (IsKeyDown(KEY_D)) {
+            dx += 1;
+            player.facingRight = true;
+            player.isMoving = true;
+        }
         player.velocity.x = dx * MOVE_SPEED;
 
         if (IsKeyPressed(KEY_SPACE) && player.onGround) {
@@ -188,89 +292,95 @@ int main() {
             player.onGround = false;
         }
 
-        // GRAVEDAD
         player.velocity.y += GRAVITY * dt;
 
-        // SALTO VARIABLE
-        if (!IsKeyDown(KEY_SPACE) && player.velocity.y < 0) {
-            player.velocity.y += FALL_GRAVITY * dt;
-        }
-
-        // MOVER X
         player.rect.x += player.velocity.x * dt;
-
-        for (int i = 0; i < PLAT_COUNT; i++) {
-            if (CheckCollisionRecs(player.rect, platforms[i])) {
-
-                if (player.velocity.x > 0)
-                    player.rect.x = platforms[i].x - player.rect.width;
-
-                else if (player.velocity.x < 0)
-                    player.rect.x = platforms[i].x + platforms[i].width;
-            }
-        }
-
-        // MOVER Y
         player.rect.y += player.velocity.y * dt;
         player.onGround = false;
 
         for (int i = 0; i < PLAT_COUNT; i++) {
             if (CheckCollisionRecs(player.rect, platforms[i])) {
-
                 if (player.velocity.y > 0) {
                     player.rect.y = platforms[i].y - player.rect.height;
                     player.velocity.y = 0;
                     player.onGround = true;
                 }
-                else if (player.velocity.y < 0) {
-                    player.rect.y = platforms[i].y + platforms[i].height;
-                    player.velocity.y = 0;
-                }
             }
         }
 
-        
         for (int i = 0; i < ENEMY_COUNT; i++) {
-            if (CheckCollisionRecs(player.rect, enemies[i].collisionRect)) {
+            if (CheckCollisionRecs(player.rect, enemies[i].rect)) {
                 gameOver = true;
             }
         }
 
-        
+        if (CheckCollisionRecs(player.rect, goal)) {
+            victory = true;
+        }
+
+        UpdatePlayerAnimation(&player);
+
+        //DIBUJO 
         BeginTextureMode(target);
         ClearBackground(BLACK);
-        
+
         DrawKitchenBackground();
-        
+
         for (int i = 0; i < PLAT_COUNT; i++)
             DrawPlatform(platforms[i]);
-        
-        DrawRectangleRec(player.rect, BLUE);
-        
-        for (int i = 0; i < ENEMY_COUNT; i++) {
+
+        DrawTexturePro(goalTex, goalSource, goal, (Vector2){0,0}, 0.0f, WHITE);
+
+        DrawPlayerNuclearFixed(player);
+
+        for (int i = 0; i < ENEMY_COUNT; i++)
             DrawEnemy(enemies[i]);
-        }
-        
+
         EndTextureMode();
 
-       
+        float scale = fmin(
+            (float)GetScreenWidth() / VIRTUAL_W,
+            (float)GetScreenHeight() / VIRTUAL_H
+        );
+
+        float offsetX = (GetScreenWidth() - VIRTUAL_W * scale) / 2;
+        float offsetY = (GetScreenHeight() - VIRTUAL_H * scale) / 2;
+
         BeginDrawing();
         ClearBackground(BLACK);
-        
-        
+
         DrawTexturePro(
             target.texture,
-            (Rectangle){0, 0, VIRTUAL_W, -VIRTUAL_H},  
-            (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
+            (Rectangle){0, 0, VIRTUAL_W, -VIRTUAL_H},
+            (Rectangle){offsetX, offsetY, VIRTUAL_W * scale, VIRTUAL_H * scale},
             (Vector2){0, 0},
             0.0f,
             WHITE
         );
         
+        // DEBUG EXTENDIDO
+        DrawText(TextFormat("Direccion: %s", player.facingRight ? "DERECHA" : "IZQUIERDA"), 
+                10, 10, 20, player.facingRight ? GREEN : RED);
+        DrawText(TextFormat("Frame: %d", player.currentFrame), 
+                10, 40, 20, DARKGRAY);
+        
+        const char* stateNames[] = {"IDLE", "WALK", "JUMP"};
+        DrawText(TextFormat("Estado: %s", stateNames[player.animState]), 
+                10, 70, 20, DARKGRAY);
+        
+        DrawText("Prueba ambas funciones en el codigo", 10, 100, 15, YELLOW);
+        DrawText("Si animacion izquierda esta al reves", 10, 120, 15, YELLOW);
+        DrawText("usa DrawPlayerNuclearFixed", 10, 140, 15, YELLOW);
+        
         EndDrawing();
     }
 
+    //  LIMPIEZA 
+    UnloadTexture(playerSpriteSheetRight);
+    UnloadTexture(playerSpriteSheetLeft);
+    UnloadTexture(goalTex);
     UnloadRenderTexture(target);
     CloseWindow();
+    
     return 0;
 }
