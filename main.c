@@ -19,8 +19,8 @@ typedef struct Player {
     Rectangle rect;
     Vector2 velocity;
     bool onGround;
-    Texture2D spriteSheetRight; 
-    Texture2D spriteSheetLeft;   
+    // Solo necesitamos la hoja de sprites 'right', la espejaremos para 'left'
+    Texture2D spriteSheet; 
     Rectangle frameRec;
     int currentFrame;
     int framesCounter;
@@ -32,6 +32,8 @@ typedef struct Player {
 typedef struct Enemy {
     Rectangle rect;
 } Enemy;
+
+// --- DIBUJO DE ESCENARIO ---
 
 // FONDO 
 void DrawKitchenBackground() {
@@ -64,6 +66,8 @@ void DrawEnemy(Enemy enemy) {
     DrawCircle(enemy.rect.x + 8,  enemy.rect.y + 6, 3, DARKGREEN);
     DrawCircle(enemy.rect.x + 20, enemy.rect.y + 6, 3, DARKGREEN);
 }
+
+// --- LÓGICA DE ANIMACIÓN ---
 
 //  ANIMACIÓN DEL JUGADOR
 void UpdatePlayerAnimation(Player *player) {
@@ -105,61 +109,37 @@ void UpdatePlayerAnimation(Player *player) {
     }
 }
 
-// DIBUJAR JUGADOR
-void DrawPlayerNuclearFixed(Player player) {
+// DIBUJAR JUGADOR (Función unificada y corregida)
+void DrawPlayer(Player player) {
     
-    if (player.facingRight) {
-        Rectangle rightFrameRec = {
-            player.currentFrame * 32,  
-            player.animState * 32,        
-            32,                           
-            32                            
-        };
-        
-        DrawTextureRec(player.spriteSheetRight, 
-                      rightFrameRec, 
-                      (Vector2){player.rect.x, player.rect.y}, 
-                      WHITE);
+    float frameWidth = 32.0f;
+    float frameHeight = 32.0f;
+    
+    // Define el rectángulo de la fuente (el área a cortar de la textura)
+    // Usaremos frameWidth o -frameWidth para espejar.
+    Rectangle sourceRec = {
+        player.currentFrame * frameWidth,  
+        player.animState * frameHeight,        
+        frameWidth,                           
+        frameHeight                            
+    };
+    
+    // ** CORRECCIÓN: Usamos ancho negativo para espejar la imagen al mirar a la izquierda **
+    if (!player.facingRight) {
+         sourceRec.width = -frameWidth; 
     } else {
-    
-        
-        int totalFrames = 0;
-        switch(player.animState) {
-            case ANIM_IDLE: totalFrames = 3; break;
-            case ANIM_WALK: totalFrames = 4; break;
-            case ANIM_JUMP: totalFrames = 1; break;
-        }
-        
-      
-        int invertedFrame = (totalFrames - 1) - player.currentFrame;
-        if (invertedFrame < 0) invertedFrame = 0;
-        
-        Rectangle leftFrameRec = {
-            invertedFrame * 32,           
-            player.animState * 32,      
-            32,                          
-            32                          
-        };
-        
-        DrawTextureRec(player.spriteSheetLeft, 
-                      leftFrameRec, 
-                      (Vector2){player.rect.x, player.rect.y}, 
-                      WHITE);
+         sourceRec.width = frameWidth;
     }
-}
-void DrawPlayerSimpleNuclear(Player player) {
-    if (player.facingRight) {
-        
-        Rectangle frameRec = {player.currentFrame * 32, player.animState * 32, 32, 32};
-        DrawTextureRec(player.spriteSheetRight, frameRec, (Vector2){player.rect.x, player.rect.y}, WHITE);
-    } else {
     
-        Rectangle frameRec = {player.currentFrame * 32, player.animState * 32, 32, 32};
-        DrawTextureRec(player.spriteSheetLeft, frameRec, (Vector2){player.rect.x, player.rect.y}, WHITE);
-    }
+    // Dibujar el sprite
+    DrawTextureRec(player.spriteSheet, 
+                  sourceRec, 
+                  (Vector2){player.rect.x, player.rect.y}, 
+                  WHITE);
 }
 
-//MAIN
+// --- PROGRAMA PRINCIPAL ---
+
 int main(void) {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_VSYNC_HINT);
     InitWindow(GetMonitorWidth(0), GetMonitorHeight(0), "Fred the Bread");
@@ -168,23 +148,15 @@ int main(void) {
 
     RenderTexture2D target = LoadRenderTexture(VIRTUAL_W, VIRTUAL_H);
     
-    Texture2D playerSpriteSheetRight = LoadTexture("bread_right.png");
-    Texture2D playerSpriteSheetLeft = LoadTexture("bread_left.png");
+    // ** SOLO CARGAMOS UNA HOJA DE SPRITES (derecha) **
+    Texture2D playerSpriteSheet = LoadTexture("bread_right.png");
     Texture2D goalTex = LoadTexture("bolsa.png");
     
  
-    if (playerSpriteSheetRight.id == 0) {
-        TraceLog(LOG_ERROR, "ERROR: No se encontró bread_right.png");
-    }
-    
-    if (playerSpriteSheetLeft.id == 0) {
-        TraceLog(LOG_ERROR, "ERROR: No se encontró bread_left.png");
-    }
-    
-    if (playerSpriteSheetRight.id != 0 && playerSpriteSheetLeft.id != 0) {
-        TraceLog(LOG_INFO, "Spritesheets cargados:");
-        TraceLog(LOG_INFO, "  Derecha: %dx%d", playerSpriteSheetRight.width, playerSpriteSheetRight.height);
-        TraceLog(LOG_INFO, "  Izquierda: %dx%d", playerSpriteSheetLeft.width, playerSpriteSheetLeft.height);
+    if (playerSpriteSheet.id == 0) {
+        TraceLog(LOG_FATAL, "ERROR: No se encontró bread_right.png. Asegúrate de que el archivo existe.");
+        CloseWindow();
+        return 1;
     }
 
     bool gameOver = false;
@@ -195,8 +167,8 @@ int main(void) {
         .rect = (Rectangle){20, 450, 32, 32},   
         .velocity = {0, 0},
         .onGround = false,
-        .spriteSheetRight = playerSpriteSheetRight,
-        .spriteSheetLeft = playerSpriteSheetLeft,
+        // Usamos la única hoja cargada
+        .spriteSheet = playerSpriteSheet, 
         .frameRec = (Rectangle){0, 0, 32, 32},
         .currentFrame = 0,
         .framesCounter = 0,
@@ -207,7 +179,7 @@ int main(void) {
 
     const float MOVE_SPEED = 210;
     const float JUMP_FORCE = 350;
-    const float FALL_GRAVITY = 900;
+    // float FALL_GRAVITY = 900; // No se usa, usando GRAVITY definido arriba
 
     Rectangle platforms[PLAT_COUNT] = {
         {0, 580, 800, 20},
@@ -331,7 +303,8 @@ int main(void) {
 
         DrawTexturePro(goalTex, goalSource, goal, (Vector2){0,0}, 0.0f, WHITE);
 
-        DrawPlayerNuclearFixed(player);
+        // ** Usar la función de dibujo corregida que implementa espejado **
+        DrawPlayer(player);
 
         for (int i = 0; i < ENEMY_COUNT; i++)
             DrawEnemy(enemies[i]);
@@ -368,16 +341,13 @@ int main(void) {
         DrawText(TextFormat("Estado: %s", stateNames[player.animState]), 
                 10, 70, 20, DARKGRAY);
         
-        DrawText("Prueba ambas funciones en el codigo", 10, 100, 15, YELLOW);
-        DrawText("Si animacion izquierda esta al reves", 10, 120, 15, YELLOW);
-        DrawText("usa DrawPlayerNuclearFixed", 10, 140, 15, YELLOW);
+       
         
         EndDrawing();
     }
 
     //  LIMPIEZA 
-    UnloadTexture(playerSpriteSheetRight);
-    UnloadTexture(playerSpriteSheetLeft);
+    UnloadTexture(playerSpriteSheet);
     UnloadTexture(goalTex);
     UnloadRenderTexture(target);
     CloseWindow();
