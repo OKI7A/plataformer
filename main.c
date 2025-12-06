@@ -94,7 +94,7 @@ int main() {
     SetTargetFPS(60);
 
     
-    // JUGADOR
+    // JUGADORdas
    
     Player player = {
         .rect = (Rectangle){100, 300, 32, 48},
