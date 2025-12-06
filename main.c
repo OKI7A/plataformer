@@ -19,7 +19,6 @@ typedef struct Player {
     Rectangle rect;
     Vector2 velocity;
     bool onGround;
-    // Solo necesitamos la hoja de sprites 'right', la espejaremos para 'left'
     Texture2D spriteSheet; 
     Rectangle frameRec;
     int currentFrame;
@@ -67,7 +66,7 @@ void DrawEnemy(Enemy enemy) {
     DrawCircle(enemy.rect.x + 20, enemy.rect.y + 6, 3, DARKGREEN);
 }
 
-// --- LÓGICA DE ANIMACIÓN ---
+// LÓGICA DE ANIMACIÓN
 
 //  ANIMACIÓN DEL JUGADOR
 void UpdatePlayerAnimation(Player *player) {
@@ -109,14 +108,13 @@ void UpdatePlayerAnimation(Player *player) {
     }
 }
 
-// DIBUJAR JUGADOR (Función unificada y corregida)
+// DIBUJAR JUGADOR
 void DrawPlayer(Player player) {
     
     float frameWidth = 32.0f;
     float frameHeight = 32.0f;
     
-    // Define el rectángulo de la fuente (el área a cortar de la textura)
-    // Usaremos frameWidth o -frameWidth para espejar.
+
     Rectangle sourceRec = {
         player.currentFrame * frameWidth,  
         player.animState * frameHeight,        
@@ -124,7 +122,7 @@ void DrawPlayer(Player player) {
         frameHeight                            
     };
     
-    // ** CORRECCIÓN: Usamos ancho negativo para espejar la imagen al mirar a la izquierda **
+    
     if (!player.facingRight) {
          sourceRec.width = -frameWidth; 
     } else {
@@ -138,7 +136,7 @@ void DrawPlayer(Player player) {
                   WHITE);
 }
 
-// --- PROGRAMA PRINCIPAL ---
+//PROGRAMA PRINCIPAL 
 
 int main(void) {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_VSYNC_HINT);
@@ -148,7 +146,7 @@ int main(void) {
 
     RenderTexture2D target = LoadRenderTexture(VIRTUAL_W, VIRTUAL_H);
     
-    // ** SOLO CARGAMOS UNA HOJA DE SPRITES (derecha) **
+    
     Texture2D playerSpriteSheet = LoadTexture("bread_right.png");
     Texture2D goalTex = LoadTexture("bolsa.png");
     
@@ -167,7 +165,7 @@ int main(void) {
         .rect = (Rectangle){20, 450, 32, 32},   
         .velocity = {0, 0},
         .onGround = false,
-        // Usamos la única hoja cargada
+        
         .spriteSheet = playerSpriteSheet, 
         .frameRec = (Rectangle){0, 0, 32, 32},
         .currentFrame = 0,
@@ -179,7 +177,7 @@ int main(void) {
 
     const float MOVE_SPEED = 210;
     const float JUMP_FORCE = 350;
-    // float FALL_GRAVITY = 900; // No se usa, usando GRAVITY definido arriba
+    
 
     Rectangle platforms[PLAT_COUNT] = {
         {0, 580, 800, 20},
@@ -303,7 +301,7 @@ int main(void) {
 
         DrawTexturePro(goalTex, goalSource, goal, (Vector2){0,0}, 0.0f, WHITE);
 
-        // ** Usar la función de dibujo corregida que implementa espejado **
+    
         DrawPlayer(player);
 
         for (int i = 0; i < ENEMY_COUNT; i++)
@@ -331,15 +329,15 @@ int main(void) {
             WHITE
         );
         
-        // DEBUG EXTENDIDO
-        DrawText(TextFormat("Direccion: %s", player.facingRight ? "DERECHA" : "IZQUIERDA"), 
-                10, 10, 20, player.facingRight ? GREEN : RED);
-        DrawText(TextFormat("Frame: %d", player.currentFrame), 
-                10, 40, 20, DARKGRAY);
+        // // DEBUG EXTENDIDO
+        // DrawText(TextFormat("Direccion: %s", player.facingRight ? "DERECHA" : "IZQUIERDA"), 
+        //         10, 10, 20, player.facingRight ? GREEN : RED);
+        // DrawText(TextFormat("Frame: %d", player.currentFrame), 
+        //         10, 40, 20, DARKGRAY);
         
-        const char* stateNames[] = {"IDLE", "WALK", "JUMP"};
-        DrawText(TextFormat("Estado: %s", stateNames[player.animState]), 
-                10, 70, 20, DARKGRAY);
+        // const char* stateNames[] = {"IDLE", "WALK", "JUMP"};
+        // DrawText(TextFormat("Estado: %s", stateNames[player.animState]), 
+        //         10, 70, 20, DARKGRAY);
         
        
         
